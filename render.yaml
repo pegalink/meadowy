@@ -1,0 +1,30 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Dashboard → New → Blueprint → pick this repo → Apply. That's the whole
+# deploy. Add the custom domain afterwards under the service's Settings →
+# Custom Domains (Render gives you the CNAME target to put on
+# meadowy.roboticrobot.xyz once the service exists).
+#
+# Caveat: Render's free plan has an ephemeral filesystem (wiped on every
+# deploy/restart) and spins down after 15 minutes idle. .sessions.json
+# won't survive either of those on free — logins will need to be redone
+# occasionally. A paid instance type with a persistent disk (uncomment
+# `disk:` below) fixes both.
+
+services:
+  - type: web
+    name: meadowy
+    runtime: docker
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: POLLINATIONS_APP_KEY
+        value: pk_5ISkAhFpFnNI1QlT
+    # disk:
+    #   name: meadowy-sessions
+    #   mountPath: /data
+    #   sizeGB: 1
+    # Uncomment the disk above (needs a paid instance type) and also set:
+    #   - key: MEADOWS_DATA_DIR
+    #     value: /data

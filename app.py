@@ -30,9 +30,17 @@ import requests
 import websocket  # from the `websocket-client` package
 from flask import Flask, Response, jsonify, redirect, render_template, request, session, stream_with_context, url_for
 from flask_sock import Sock
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
+# Real deployments sit behind a reverse proxy (Render, Fly, nginx, ...) that
+# terminates TLS and forwards plain HTTP internally, setting X-Forwarded-*
+# headers to say so. Without this, request.is_secure and url_for(_external=
+# True) can't tell the request was actually HTTPS — which would silently
+# build an http:// OAuth redirect_uri that mismatches whatever https://...
+# is registered at Pollinations, breaking login only in production.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 sock = Sock(app)
 
 # ---------------------------------------------------------------------------
@@ -68,7 +76,12 @@ MODELS_TIMEOUT = 20
 # ---------------------------------------------------------------------------
 
 SESSION_COOKIE = "meadows_session"
-_SESSIONS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".sessions.json")
+# Defaults to living next to app.py (fine for local dev, and for any host
+# with a persistent filesystem). Point MEADOWS_DATA_DIR at a mounted
+# persistent volume in containerized deployments where the app directory
+# itself gets wiped/replaced on every deploy.
+_DATA_DIR = os.environ.get("MEADOWS_DATA_DIR") or os.path.dirname(os.path.abspath(__file__))
+_SESSIONS_FILE = os.path.join(_DATA_DIR, ".sessions.json")
 
 
 def _load_sessions():
@@ -81,6 +94,7 @@ def _load_sessions():
 
 def _save_sessions():
     try:
+        os.makedirs(_DATA_DIR, exist_ok=True)
         with open(_SESSIONS_FILE, "w") as f:
             json.dump(SESSIONS, f)
     except OSError:
