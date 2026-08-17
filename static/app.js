@@ -7,6 +7,7 @@ const uploads = {}; // key -> data URL string, shared by all dropzones
 let session = { logged_in: false, name: null }; // Pollinations login state — never a key, just a flag + display name
 let currentPanel = "chat";
 let activeConversation = null;
+let pendingLoginError = null; // shown inside the auth-gate card, which is what's actually visible when logged out
 
 // =========================================================================
 // theme
@@ -163,9 +164,13 @@ function renderAuthGate() {
 
   const body = document.getElementById("auth-gate-body");
   if (provider.kind === "pollinations") {
+    const errorHtml = pendingLoginError
+      ? `<p class="status error" style="margin-top:0">Sign-in failed: ${escapeHtml(pendingLoginError)}</p>`
+      : "";
     body.innerHTML = `
       <h2>Welcome to Meadows</h2>
       <p>Sign in with your Pollinations account to start chatting, generating images, and more. Nothing is sent anywhere until you do.</p>
+      ${errorHtml}
       <button id="auth-gate-login-btn"><span class="btn-icon">🔑</span>Sign in with Pollinations</button>`;
     document.getElementById("auth-gate-login-btn").addEventListener("click", () => (window.location.href = "/oauth/login"));
   } else {
@@ -946,8 +951,8 @@ function initSttPanel() {
 // =========================================================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  const loginError = new URLSearchParams(location.search).get("login_error");
-  if (loginError) history.replaceState(null, "", location.pathname);
+  pendingLoginError = new URLSearchParams(location.search).get("login_error");
+  if (pendingLoginError) history.replaceState(null, "", location.pathname);
 
   initTheme();
   initFireflies();
@@ -998,10 +1003,5 @@ document.addEventListener("DOMContentLoaded", () => {
   if (typeof initChain === "function") initChain();
   if (typeof initRealtime === "function") initRealtime();
 
-  refreshSession().then(() => {
-    if (loginError) {
-      const status = document.getElementById("chat-status");
-      if (status) setStatus(status, "Sign-in failed: " + loginError, "error");
-    }
-  });
+  refreshSession(); // renderAuthGate(), called inside, picks up pendingLoginError if present
 });
