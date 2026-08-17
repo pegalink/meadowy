@@ -19,6 +19,7 @@ and no server-side env-var key silently used without the user asking.
 """
 
 import base64
+import binascii
 import hashlib
 import json
 import os
@@ -536,6 +537,50 @@ def api_chat():
 # ---------------------------------------------------------------------------
 
 
+def _edit_image_via_v1(provider, prompt, data, headers):
+    """/image/{prompt}'s `image` query param is documented as a reference
+    *URL* — passing the browser's raw data: URI there blows straight past
+    GET URL-length limits (the 414 this exists to fix). The natural next
+    move, Pollinations' own POST /upload to mint a short URL first, turns
+    out to 404 live despite being documented (checked directly — every
+    variant, with and without auth). So: go through the OpenAI-compatible
+    POST /v1/images/edits instead, which is confirmed live (401s cleanly
+    without auth rather than 404ing) and takes the file directly as
+    multipart, no upload step needed at all.
+    """
+    try:
+        header, b64data = data["image"].split(",", 1)
+        content_type = header.split(";")[0][len("data:"):] or "image/png"
+        raw = base64.b64decode(b64data)
+    except (ValueError, KeyError, binascii.Error):
+        return jsonify({"error": "invalid reference image data"}), 400
+
+    ext = content_type.split("/")[-1] or "png"
+    files = {"image": (f"reference.{ext}", raw, content_type)}
+    form = {"prompt": prompt}
+    if data.get("model"):
+        form["model"] = data["model"]
+
+    url = poll_url(provider, "/v1/images/edits")
+    try:
+        resp = requests.post(url, files=files, data=form, headers=headers, timeout=REQUEST_TIMEOUT)
+    except requests.RequestException as exc:
+        return jsonify({"error": str(exc)}), 502
+    if resp.status_code != 200:
+        return upstream_error(resp)
+
+    try:
+        item = resp.json()["data"][0]
+    except Exception:
+        return jsonify({"error": "unexpected response shape from provider", "body": resp.text[:500]}), 502
+
+    if item.get("b64_json"):
+        return jsonify({"image": f"data:image/png;base64,{item['b64_json']}"})
+    if item.get("url"):
+        return jsonify({"image": item["url"]})
+    return jsonify({"error": "provider returned neither b64_json nor url"}), 502
+
+
 @app.route("/api/image", methods=["POST"])
 def api_image():
     data = request.get_json(force=True, silent=True) or {}
@@ -551,6 +596,9 @@ def api_image():
     headers = auth_headers(provider)
 
     if provider["kind"] == "pollinations":
+        if data.get("image"):
+            return _edit_image_via_v1(provider, prompt, data, headers)
+
         params = {}
         if data.get("model"):
             params["model"] = data["model"]
@@ -560,8 +608,6 @@ def api_image():
             params["height"] = data["height"]
         if data.get("seed"):
             params["seed"] = data["seed"]
-        if data.get("image"):
-            params["image"] = data["image"]
 
         url = poll_url(provider, f"/image/{requests.utils.quote(prompt)}")
         try:
