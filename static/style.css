@@ -346,8 +346,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  backdrop-filter: blur(3px);
+  /* No backdrop-filter here on purpose: blurring something sitting above
+     continuously-animating content (the firefly decoration) forces a full
+     re-blur of the whole viewport on every animation frame — measured at
+     ~90ms/frame (≈11fps) with it, ~17ms/frame (≈58fps) without. A slightly
+     richer solid-ish scrim reads almost identically without that cost. */
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
 }
 .auth-gate-card {
   max-width: 380px;
