@@ -106,7 +106,18 @@ SESSIONS = _load_sessions()
 
 def current_session():
     sid = request.cookies.get(SESSION_COOKIE)
-    return SESSIONS.get(sid) if sid else None
+    if not sid:
+        return None
+    s = SESSIONS.get(sid)
+    if s is None:
+        # Under multiple worker processes, a session created by a sibling
+        # worker won't be in *our* in-memory copy until we pick up what it
+        # wrote to disk. Only costs a file read on a miss, not every
+        # request, and self-heals regardless of which worker handles which
+        # request from here on.
+        SESSIONS.update(_load_sessions())
+        s = SESSIONS.get(sid)
+    return s
 
 
 def current_session_key():
