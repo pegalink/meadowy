@@ -506,6 +506,12 @@ def api_chat():
     payload = {"model": model, "messages": messages, "stream": True}
     if data.get("temperature") is not None:
         payload["temperature"] = data["temperature"]
+    # "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max" per
+    # Pollinations' own /v1/chat/completions schema. Models that don't
+    # support adjustable reasoning just ignore it — safe to always forward
+    # when the client sends one.
+    if data.get("reasoning_effort"):
+        payload["reasoning_effort"] = data["reasoning_effort"]
 
     headers = {**auth_headers(provider), "Content-Type": "application/json", "Accept": "text/event-stream"}
 

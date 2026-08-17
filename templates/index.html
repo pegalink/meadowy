@@ -67,6 +67,15 @@
           <input id="chat-model" list="chat-models-list" placeholder="pick a model" autocomplete="off">
           <datalist id="chat-models-list"></datalist>
         </div>
+        <select id="chat-reasoning" class="reasoning-select" title="Reasoning effort — how much a reasoning-capable model thinks before answering. Ignored by models that don't support it.">
+          <option value="none">no reasoning</option>
+          <option value="minimal">minimal reasoning</option>
+          <option value="low">low reasoning</option>
+          <option value="medium" selected>medium reasoning</option>
+          <option value="high">high reasoning</option>
+          <option value="xhigh">xhigh reasoning</option>
+          <option value="max">max reasoning</option>
+        </select>
       </header>
 
       <div class="chat-log" id="chat-log">

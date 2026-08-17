@@ -197,7 +197,8 @@ async function runChainTurn(blob) {
   let reply;
   try {
     const renderReply = rafThrottle((full) => turn.setReply(full));
-    reply = await streamChat(provider, llmModel, messages, renderReply);
+    const reasoningEffort = localStorage.getItem("meadows.reasoning_effort") || "medium";
+    reply = await streamChat(provider, llmModel, messages, renderReply, { reasoning_effort: reasoningEffort });
   } catch (err) {
     setStatus(status, "LLM error: " + err.message, "error");
     return;

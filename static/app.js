@@ -522,11 +522,11 @@ async function parseSSEStream(response, onDelta) {
   return full;
 }
 
-async function streamChat(provider, model, messages, onDelta) {
+async function streamChat(provider, model, messages, onDelta, opts = {}) {
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...providerRequestFields(provider), model, messages }),
+    body: JSON.stringify({ ...providerRequestFields(provider), model, messages, ...opts }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -705,7 +705,10 @@ async function sendChat() {
 
   try {
     const provider = getActiveProvider();
-    const final = await streamChat(provider, model, activeConversation.messages, renderAssistant);
+    const reasoningEffort = document.getElementById("chat-reasoning").value;
+    const final = await streamChat(provider, model, activeConversation.messages, renderAssistant, {
+      reasoning_effort: reasoningEffort,
+    });
     renderAssistant(final); // guarantee the last frame-throttled chunk isn't dropped
     activeConversation.messages.push({ role: "assistant", content: final });
     updateConversation(activeConversation.id, { messages: activeConversation.messages });
@@ -972,6 +975,10 @@ document.addEventListener("DOMContentLoaded", () => {
   wireModelIconPreview("chain-tts-model", "chain-tts-model-icon");
   wireVoiceAutoPopulate("tts-model", "tts-voice");
   wireVoiceAutoPopulate("chain-tts-model", "chain-tts-voice");
+
+  const reasoningSelect = document.getElementById("chat-reasoning");
+  reasoningSelect.value = localStorage.getItem("meadows.reasoning_effort") || "medium";
+  reasoningSelect.addEventListener("change", () => localStorage.setItem("meadows.reasoning_effort", reasoningSelect.value));
 
   document.getElementById("new-chat-btn").addEventListener("click", startNewChat);
   document.getElementById("chat-send").addEventListener("click", sendChat);
