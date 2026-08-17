@@ -196,7 +196,8 @@ async function runChainTurn(blob) {
   setStatus(status, "Thinking…");
   let reply;
   try {
-    reply = await streamChat(provider, llmModel, messages, (full) => turn.setReply(full));
+    const renderReply = rafThrottle((full) => turn.setReply(full));
+    reply = await streamChat(provider, llmModel, messages, renderReply);
   } catch (err) {
     setStatus(status, "LLM error: " + err.message, "error");
     return;

@@ -50,6 +50,26 @@ function setStatus(el, msg, kind) {
   el.className = "status" + (kind ? ` ${kind}` : "");
 }
 
+// Coalesces rapid-fire calls (e.g. one per streamed SSE token) down to at
+// most one per animation frame, keeping only the latest args. Streaming
+// markdown re-parses the *entire* accumulated text and replaces the whole
+// innerHTML on every update — fine once per frame, a real "very laggy"
+// bug at one-per-token for a long reply (hundreds of full re-renders and
+// forced layout reflows in a burst).
+function rafThrottle(fn) {
+  let scheduled = false;
+  let latestArgs = null;
+  return (...args) => {
+    latestArgs = args;
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      scheduled = false;
+      fn(...latestArgs);
+    });
+  };
+}
+
 // =========================================================================
 // panel navigation (sidebar tool buttons + settings, chat is the default)
 // =========================================================================
@@ -673,12 +693,15 @@ async function sendChat() {
   sendBtn.disabled = true;
   setStatus(status, "");
 
+  const renderAssistant = rafThrottle((full) => {
+    assistantBody.innerHTML = renderMarkdown(full);
+    document.getElementById("chat-log").scrollTop = document.getElementById("chat-log").scrollHeight;
+  });
+
   try {
     const provider = getActiveProvider();
-    const final = await streamChat(provider, model, activeConversation.messages, (full) => {
-      assistantBody.innerHTML = renderMarkdown(full);
-      document.getElementById("chat-log").scrollTop = document.getElementById("chat-log").scrollHeight;
-    });
+    const final = await streamChat(provider, model, activeConversation.messages, renderAssistant);
+    renderAssistant(final); // guarantee the last frame-throttled chunk isn't dropped
     activeConversation.messages.push({ role: "assistant", content: final });
     updateConversation(activeConversation.id, { messages: activeConversation.messages });
   } catch (err) {
