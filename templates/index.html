@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meadows</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="ambient" aria-hidden="true">
+  <div class="glow glow-a"></div>
+  <div class="glow glow-b"></div>
+  <div class="fireflies" id="fireflies"></div>
+</div>
+
+<div class="app-shell">
+  <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">☰</button>
+  <div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 21V10"/>
+          <path d="M12 10c0-4.5 3.2-7 7.5-7 0 4.7-2.3 7.6-7.5 7z"/>
+          <path d="M12 13c0-3.6-2.6-5.8-6-5.8 0 3.8 1.9 6.1 6 5.8z"/>
+        </svg>
+      </span>
+      <span class="brand-name">Meadows</span>
+    </div>
+
+    <button id="new-chat-btn" class="new-chat-btn"><span class="btn-icon">✏️</span>New chat</button>
+
+    <div class="sidebar-section-label">Chats</div>
+    <div class="conversation-list" id="conversation-list"></div>
+
+    <div class="sidebar-section-label">Tools</div>
+    <nav class="sidebar-tools">
+      <button class="tool-btn" data-tab="image">🖼️ <span>Images</span></button>
+      <button class="tool-btn" data-tab="video">🎬 <span>Video</span></button>
+      <button class="tool-btn" data-tab="tts">🔊 <span>Speech</span></button>
+      <button class="tool-btn" data-tab="stt">🎙️ <span>Listen</span></button>
+      <button class="tool-btn" data-tab="chain">🌾 <span>Voice Chain</span></button>
+      <button class="tool-btn" data-tab="realtime">🎧 <span>Realtime</span></button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="footer-row">
+        <button id="theme-btn" title="Toggle dark/light mode">🌙</button>
+        <button class="tool-btn footer-settings" data-tab="settings">⚙️ <span>Settings</span></button>
+      </div>
+      <div id="account-area"></div>
+    </div>
+  </aside>
+
+  <main class="app-main">
+    <div class="auth-gate" id="auth-gate" hidden>
+      <div class="auth-gate-card" id="auth-gate-body"></div>
+    </div>
+
+    <!-- ============ CHAT ============ -->
+    <section class="panel-view active" id="panel-chat" data-panel="chat">
+      <header class="chat-topbar">
+        <div class="model-picker">
+          <span class="model-icon-slot" id="chat-model-icon"></span>
+          <input id="chat-model" list="chat-models-list" placeholder="pick a model" autocomplete="off">
+          <datalist id="chat-models-list"></datalist>
+        </div>
+      </header>
+
+      <div class="chat-log" id="chat-log">
+        <div class="chat-empty" id="chat-empty">
+          <span class="chat-empty-mark">🌾</span>
+          <h2>What's growing today?</h2>
+          <p>Pick a model above and start typing. Attach an image for vision-capable models.</p>
+        </div>
+      </div>
+
+      <div class="chat-composer">
+        <div class="upload-preview" id="chat-file-preview" hidden>
+          <img id="chat-file-thumb" alt="attachment">
+          <button class="chip-remove" id="chat-file-remove" type="button">✕</button>
+        </div>
+        <div class="composer-row" id="chat-drop" data-target="chat-file">
+          <label class="composer-attach" title="Attach an image">
+            📎<input type="file" id="chat-file" accept="image/*" hidden>
+          </label>
+          <textarea id="chat-input" rows="1" placeholder="Message Meadows…"></textarea>
+          <button id="chat-send" class="composer-send" title="Send" aria-label="Send">➤</button>
+        </div>
+        <div id="chat-status" class="status"></div>
+      </div>
+    </section>
+
+    <!-- ============ IMAGE ============ -->
+    <section class="panel-view" id="panel-image" data-panel="image">
+      <div class="panel-head">
+        <label>Model</label>
+        <div class="model-picker">
+          <span class="model-icon-slot" id="img-model-icon"></span>
+          <input id="img-model" list="img-models-list" placeholder="e.g. flux" autocomplete="off">
+          <datalist id="img-models-list"></datalist>
+        </div>
+      </div>
+
+      <label>Prompt</label>
+      <textarea id="img-prompt" rows="3">a wildflower meadow at golden hour, soft light, watercolor</textarea>
+
+      <div class="row">
+        <div><label>Width</label><input id="img-width" placeholder="1024"></div>
+        <div><label>Height</label><input id="img-height" placeholder="1024"></div>
+        <div><label>Seed</label><input id="img-seed" placeholder="(random)"></div>
+      </div>
+
+      <label>Reference image <span class="hint">(optional — for img2img models like kontext)</span></label>
+      <div class="dropzone" id="img-drop" data-target="img-file">
+        <input type="file" id="img-file" accept="image/*" hidden>
+        <div class="dropzone-body">
+          <span class="dropzone-icon">📎</span>
+          <span class="dropzone-text">Drop an image or click to upload</span>
+        </div>
+        <div class="upload-preview" id="img-file-preview" hidden>
+          <img id="img-file-thumb" alt="reference">
+          <button class="chip-remove" id="img-file-remove" type="button">✕</button>
+        </div>
+      </div>
+
+      <button id="img-btn"><span class="btn-icon">✨</span>Generate Image</button>
+      <div id="img-status" class="status"></div>
+      <div id="img-result"></div>
+    </section>
+
+    <!-- ============ VIDEO ============ -->
+    <section class="panel-view" id="panel-video" data-panel="video">
+      <p class="note">🧪 Experimental — video generation support and speed vary a lot by provider/model. If it fails, that's usually the provider, not Meadows.</p>
+
+      <div class="panel-head">
+        <label>Model</label>
+        <div class="model-picker">
+          <span class="model-icon-slot" id="vid-model-icon"></span>
+          <input id="vid-model" list="vid-models-list" placeholder="model id" autocomplete="off">
+          <datalist id="vid-models-list"></datalist>
+        </div>
+      </div>
+
+      <label>Prompt</label>
+      <textarea id="vid-prompt" rows="3">a gentle breeze moving through tall grass, cinematic, slow motion</textarea>
+
+      <div class="row">
+        <div><label>Width</label><input id="vid-width" placeholder="1024"></div>
+        <div><label>Height</label><input id="vid-height" placeholder="576"></div>
+        <div><label>Seed</label><input id="vid-seed" placeholder="(random)"></div>
+      </div>
+
+      <button id="vid-btn"><span class="btn-icon">🎬</span>Generate Video</button>
+      <div id="vid-status" class="status"></div>
+      <div id="vid-result"></div>
+    </section>
+
+    <!-- ============ TTS ============ -->
+    <section class="panel-view" id="panel-tts" data-panel="tts">
+      <div class="panel-head">
+        <label>Model</label>
+        <div class="model-picker">
+          <span class="model-icon-slot" id="tts-model-icon"></span>
+          <input id="tts-model" list="tts-models-list" placeholder="e.g. elevenlabs" autocomplete="off">
+          <datalist id="tts-models-list"></datalist>
+        </div>
+      </div>
+
+      <label>Text to speak</label>
+      <textarea id="tts-text" rows="3">Hello! This is a test of the Meadows text to speech playground.</textarea>
+
+      <div class="row">
+        <div>
+          <label>Voice</label>
+          <select id="tts-voice">
+            <option value="alloy">alloy</option>
+            <option value="echo">echo</option>
+            <option value="fable">fable</option>
+            <option value="onyx">onyx</option>
+            <option value="nova">nova</option>
+            <option value="shimmer">shimmer</option>
+          </select>
+        </div>
+      </div>
+
+      <button id="tts-btn"><span class="btn-icon">🔊</span>Generate Speech</button>
+      <div id="tts-status" class="status"></div>
+      <div id="tts-result"></div>
+    </section>
+
+    <!-- ============ STT ============ -->
+    <section class="panel-view" id="panel-stt" data-panel="stt">
+      <div class="panel-head">
+        <label>Model</label>
+        <div class="model-picker">
+          <span class="model-icon-slot" id="stt-model-icon"></span>
+          <input id="stt-model" list="stt-models-list" placeholder="e.g. whisper" autocomplete="off">
+          <datalist id="stt-models-list"></datalist>
+        </div>
+      </div>
+
+      <label>Record or upload audio</label>
+      <div class="mic-row">
+        <button id="stt-record-btn" class="mic-btn" type="button">🎙️<span>Hold to record</span></button>
+        <label class="upload-btn" for="stt-file">📁 Upload audio<input type="file" id="stt-file" accept="audio/*" hidden></label>
+      </div>
+      <audio id="stt-audio-preview" controls hidden></audio>
+
+      <button id="stt-btn"><span class="btn-icon">📝</span>Transcribe</button>
+      <div id="stt-status" class="status"></div>
+      <div id="stt-result" class="markdown"></div>
+    </section>
+
+    <!-- ============ VOICE CHAIN ============ -->
+    <section class="panel-view" id="panel-chain" data-panel="chain">
+      <p class="note">Build a real pipeline: your voice → <strong>STT</strong> → <strong>LLM</strong> → <strong>TTS</strong> — pick a <em>different</em> model for each stage, even across different providers. For the genuine low-latency realtime protocol with one integrated model instead, see 🎧 Realtime.</p>
+
+      <div class="chain-models">
+        <div class="chain-model-field">
+          <label>🎙️ STT model</label>
+          <div class="model-picker">
+            <span class="model-icon-slot" id="chain-stt-model-icon"></span>
+            <input id="chain-stt-model" list="stt-models-list" placeholder="e.g. whisper" autocomplete="off">
+          </div>
+        </div>
+        <div class="chain-arrow">→</div>
+        <div class="chain-model-field">
+          <label>🧠 LLM model</label>
+          <div class="model-picker">
+            <span class="model-icon-slot" id="chain-llm-model-icon"></span>
+            <input id="chain-llm-model" list="chat-models-list" placeholder="e.g. openai" autocomplete="off">
+          </div>
+        </div>
+        <div class="chain-arrow">→</div>
+        <div class="chain-model-field">
+          <label>🔊 TTS model / voice</label>
+          <div class="model-picker">
+            <span class="model-icon-slot" id="chain-tts-model-icon"></span>
+            <input id="chain-tts-model" list="tts-models-list" placeholder="e.g. elevenlabs" autocomplete="off">
+          </div>
+          <select id="chain-tts-voice">
+            <option value="alloy">alloy</option>
+            <option value="echo">echo</option>
+            <option value="fable">fable</option>
+            <option value="onyx">onyx</option>
+            <option value="nova">nova</option>
+            <option value="shimmer">shimmer</option>
+          </select>
+        </div>
+      </div>
+
+      <label>System prompt <span class="hint">(optional — sets the LLM's persona)</span></label>
+      <textarea id="chain-system" rows="2" placeholder="You are a friendly meadow guide who answers briefly.">You are a warm, concise voice assistant. Keep replies short and conversational.</textarea>
+
+      <div class="chain-controls">
+        <button id="chain-record-btn" class="mic-btn big" type="button">🎙️<span>Hold to talk</span></button>
+        <label class="toggle">
+          <input type="checkbox" id="chain-auto-loop">
+          <span>Keep listening after each reply</span>
+        </label>
+        <button id="chain-reset" class="btn-ghost">Reset conversation</button>
+      </div>
+      <div id="chain-status" class="status"></div>
+
+      <div class="chain-log" id="chain-log"></div>
+    </section>
+
+    <!-- ============ REALTIME ============ -->
+    <section class="panel-view" id="panel-realtime" data-panel="realtime">
+      <p class="note">The genuine low-latency Realtime API — a live WebSocket to the model (server voice-activity detection handles turn-taking for you), not a chained approximation.</p>
+
+      <div class="row">
+        <div>
+          <label>Model</label>
+          <div class="model-picker">
+            <span class="model-icon-slot" id="rt-model-icon"></span>
+            <input id="rt-model" value="gpt-realtime-2.1" autocomplete="off">
+          </div>
+        </div>
+        <div>
+          <label>Voice</label>
+          <select id="rt-voice">
+            <option value="alloy">alloy</option>
+            <option value="echo">echo</option>
+            <option value="verse">verse</option>
+            <option value="coral">coral</option>
+            <option value="ballad">ballad</option>
+            <option value="sage">sage</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="chain-controls">
+        <button id="rt-connect-btn"><span class="btn-icon">🎧</span>Connect</button>
+        <span class="hint" id="rt-hint">Not connected.</span>
+      </div>
+      <div id="rt-status" class="status"></div>
+
+      <div class="chain-log" id="rt-log"></div>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section class="panel-view" id="panel-settings" data-panel="settings">
+      <h2 class="section-title">Account</h2>
+      <div class="provider-card" id="pollinations-card">
+        <div class="provider-card-head">
+          <span class="model-icon-slot" style="width:22px;height:22px">🌻</span>
+          <strong>Pollinations</strong>
+          <span class="badge">built-in</span>
+        </div>
+        <p class="hint">Sign in with your real Pollinations account (OAuth 2.1 + PKCE). The resulting key lives server-side behind an httpOnly session cookie — this page's JavaScript never sees it, and there's nothing to paste.</p>
+        <div id="settings-account-area"></div>
+      </div>
+
+      <h2 class="section-title">Active endpoint</h2>
+      <p class="note">Meadows talks to Pollinations by default. Switch to any OpenAI-compatible endpoint here — OpenRouter, OpenAI itself, a local gateway — if you'd rather bring your own.</p>
+      <div class="provider-pill" id="provider-pill" title="Active endpoint">
+        <span class="provider-dot" id="provider-dot"></span>
+        <select id="provider-select" aria-label="Active provider"></select>
+      </div>
+
+      <h3 class="section-title small">Custom OpenAI-compatible endpoints</h3>
+      <div id="custom-provider-list"></div>
+
+      <div class="provider-card new-provider-card">
+        <div class="provider-card-head"><strong>Add an endpoint</strong></div>
+        <div class="row">
+          <div><label>Name</label><input id="new-provider-name" placeholder="OpenRouter"></div>
+        </div>
+        <label>Base URL <span class="hint">(include the trailing /v1, e.g. https://openrouter.ai/api/v1)</span></label>
+        <input id="new-provider-baseurl" placeholder="https://api.openai.com/v1">
+        <label>API key</label>
+        <input id="new-provider-key" placeholder="sk-...">
+        <button id="add-provider-btn"><span class="btn-icon">➕</span>Add endpoint</button>
+      </div>
+
+      <h3 class="section-title small">Active endpoint models</h3>
+      <button id="refresh-models-btn" class="btn-ghost">🔄 Detect models</button>
+      <div id="model-list-preview" class="model-list-preview"></div>
+    </section>
+
+  </main>
+</div>
+
+<footer class="grass-footer" aria-hidden="true"></footer>
+
+<script src="/static/icons.js"></script>
+<script src="/static/providers.js"></script>
+<script src="/static/conversations.js"></script>
+<script src="/static/markdown.js"></script>
+<script src="/static/app.js"></script>
+<script src="/static/chain.js"></script>
+<script src="/static/realtime.js"></script>
+</body>
+</html>

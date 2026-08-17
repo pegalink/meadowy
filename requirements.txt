@@ -1,0 +1,4 @@
+flask
+requests
+flask-sock
+websocket-client
