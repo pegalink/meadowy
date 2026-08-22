@@ -25,6 +25,7 @@ import json
 import os
 import secrets
 import threading
+import time
 from urllib.parse import urlencode
 
 import requests
@@ -32,6 +33,8 @@ import websocket  # from the `websocket-client` package
 from flask import Flask, Response, jsonify, redirect, render_template, request, session, stream_with_context, url_for
 from flask_sock import Sock
 from werkzeug.middleware.proxy_fix import ProxyFix
+
+import quality_tests
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
@@ -536,6 +539,45 @@ def api_chat():
     resp_headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
     content_type = upstream.headers.get("Content-Type", "text/event-stream")
     return Response(stream_with_context(relay()), mimetype=content_type, headers=resp_headers)
+
+
+# ---------------------------------------------------------------------------
+# Model quality test — a small fixed suite (arithmetic, JSON structured
+# output, literal instruction-following, factual recall, basic code
+# generation) run non-streaming against one model. See quality_tests.py for
+# the prompts/checks themselves; the same suite backs tests/model_quality.py
+# for CLI/CI use.
+# ---------------------------------------------------------------------------
+
+
+@app.route("/api/quality-test", methods=["POST"])
+def api_quality_test():
+    data = request.get_json(force=True, silent=True) or {}
+    provider = resolve_provider(data)
+    err = require_credentials(provider)
+    if err:
+        return err
+
+    model = data.get("model") or ("openai" if provider["kind"] == "pollinations" else "")
+    if not model:
+        return jsonify({"error": "model is required"}), 400
+
+    url = poll_url(provider, "/v1/chat/completions") if provider["kind"] == "pollinations" else custom_url(provider, "/chat/completions")
+    headers = {**auth_headers(provider), "Content-Type": "application/json"}
+
+    def chat_fn(messages):
+        payload = {"model": model, "messages": messages, "temperature": 0, "max_tokens": 200, "stream": False}
+        started = time.monotonic()
+        resp = requests.post(url, json=payload, headers=headers, timeout=REQUEST_TIMEOUT)
+        elapsed = time.monotonic() - started
+        if resp.status_code >= 400:
+            raise RuntimeError(f"provider returned {resp.status_code}: {resp.text[:300]}")
+        body = resp.json()
+        content = body["choices"][0]["message"]["content"] or ""
+        return content, elapsed
+
+    results = quality_tests.run_suite(chat_fn)
+    return jsonify({"model": model, "results": results})
 
 
 # ---------------------------------------------------------------------------

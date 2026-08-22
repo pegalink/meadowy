@@ -573,6 +573,41 @@ button:disabled { opacity: 0.6; cursor: default; transform: none; }
   box-shadow: var(--shadow);
 }
 
+.quality-result {
+  flex-shrink: 0;
+  margin-bottom: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-panel);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  animation: fade-in 0.25s ease;
+}
+.quality-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+.quality-header strong { flex-shrink: 0; }
+.quality-header .badge { margin-left: 0; }
+.quality-header .chip-remove { margin-left: auto; }
+.quality-row {
+  display: grid;
+  grid-template-columns: 1.4rem 9rem 1fr;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.82rem;
+  border-top: 1px solid var(--border);
+}
+.quality-row:first-of-type { border-top: none; }
+.quality-row .quality-name { font-weight: 600; }
+.quality-row.fail .quality-name { color: var(--error-text); }
+.quality-row .quality-detail { grid-column: 1 / -1; color: var(--text-dim); word-break: break-word; }
+.quality-row .hint { grid-column: 2 / -1; }
+
 .chat-log {
   flex: 1;
   min-height: 0;
