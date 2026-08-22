@@ -149,6 +149,27 @@ key for the LLM, ElevenLabs for TTS). Push-to-talk or a simple
 volume-based hands-free loop; useful when you want control over each
 stage rather than one bundled realtime model.
 
+## Testing a model's quality
+
+`tests/model_quality.py` is a small CLI that runs a fixed set of 5 cheap,
+deterministic probes against one model — arithmetic, JSON structured
+output, literal instruction-following, factual recall, and basic code
+generation — and prints a pass/fail scorecard. No second "judge" model call
+and no framework: every check is a plain string/JSON/exec assertion, and
+each prompt caps `max_tokens`, so a full run is 5 short requests.
+
+```bash
+# a Pollinations model, using a personal access token
+POLLINATIONS_API_KEY=sk_... python3 tests/model_quality.py --model openai
+
+# any OpenAI-compatible custom endpoint
+python3 tests/model_quality.py --model gpt-4o-mini --kind custom \
+  --base-url https://api.openai.com/v1 --api-key sk-...
+
+# machine-readable output, non-zero exit on any failure (CI-friendly)
+python3 tests/model_quality.py --model openai --json
+```
+
 ## Known limitations (honest, not hidden)
 
 - **Video generation is experimental.** Pollinations' `/video/{prompt}`
