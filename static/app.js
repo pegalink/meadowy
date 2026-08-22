@@ -660,6 +660,72 @@ function autoGrowTextarea(el) {
   el.style.height = Math.min(el.scrollHeight, 200) + "px";
 }
 
+// =========================================================================
+// model quality test — 5 cheap, deterministic probes run against whatever
+// model is picked in the chat panel. See quality_tests.py for the prompts
+// and checks; this just calls /api/quality-test and renders the scorecard.
+// =========================================================================
+
+async function runQualityTest() {
+  const model = document.getElementById("chat-model").value.trim();
+  const btn = document.getElementById("quality-test-btn");
+  const result = document.getElementById("quality-result");
+
+  result.hidden = false;
+  if (!model) {
+    result.innerHTML = `<div class="status error" style="margin:0.6rem 0.8rem;">Pick a model first.</div>`;
+    return;
+  }
+
+  const provider = getActiveProvider();
+  const prevLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "🧪 Testing…";
+  result.innerHTML = `<div class="status" style="margin:0.6rem 0.8rem;">Running 5 quick probes against ${escapeHtml(model)}…</div>`;
+
+  try {
+    const res = await fetch("/api/quality-test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...providerRequestFields(provider), model }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `provider returned ${res.status}`);
+    renderQualityResult(model, data.results);
+  } catch (err) {
+    result.innerHTML = `<div class="status error" style="margin:0.6rem 0.8rem;">Error: ${escapeHtml(err.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = prevLabel;
+  }
+}
+
+function renderQualityResult(model, results) {
+  const result = document.getElementById("quality-result");
+  const passedCount = results.filter((r) => r.passed).length;
+  const rows = results
+    .map(
+      (r) => `
+        <div class="quality-row ${r.passed ? "pass" : "fail"}">
+          <span>${r.passed ? "✅" : "❌"}</span>
+          <span class="quality-name">${escapeHtml(r.name)}</span>
+          <span class="hint">${escapeHtml(r.category)} · ${r.elapsed_s}s</span>
+          <span class="quality-detail">${escapeHtml(r.detail)}</span>
+        </div>`
+    )
+    .join("");
+  result.innerHTML = `
+    <div class="quality-header">
+      <strong>${escapeHtml(model)}</strong>
+      <span class="badge">${passedCount}/${results.length} passed</span>
+      <button class="chip-remove" id="quality-close" type="button" title="Close">✕</button>
+    </div>
+    ${rows}`;
+  document.getElementById("quality-close").addEventListener("click", () => {
+    result.hidden = true;
+  });
+}
+
 async function sendChat() {
   const input = document.getElementById("chat-input");
   const text = input.value.trim();
@@ -982,6 +1048,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("new-chat-btn").addEventListener("click", startNewChat);
   document.getElementById("chat-send").addEventListener("click", sendChat);
+  document.getElementById("quality-test-btn").addEventListener("click", runQualityTest);
   const chatInput = document.getElementById("chat-input");
   chatInput.addEventListener("input", () => autoGrowTextarea(chatInput));
   chatInput.addEventListener("keydown", (e) => {

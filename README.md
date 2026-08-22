@@ -151,12 +151,20 @@ stage rather than one bundled realtime model.
 
 ## Testing a model's quality
 
-`tests/model_quality.py` is a small CLI that runs a fixed set of 5 cheap,
-deterministic probes against one model — arithmetic, JSON structured
-output, literal instruction-following, factual recall, and basic code
-generation — and prints a pass/fail scorecard. No second "judge" model call
-and no framework: every check is a plain string/JSON/exec assertion, and
-each prompt caps `max_tokens`, so a full run is 5 short requests.
+A **🧪 Test quality** button sits next to the reasoning selector in the chat
+panel — click it to run 5 cheap, deterministic probes against whatever
+model is picked (arithmetic, JSON structured output, literal
+instruction-following, factual recall, and basic code generation) and see
+a pass/fail scorecard right there, against whichever provider is currently
+active (Pollinations or a custom endpoint). No second "judge" model call:
+every check is a plain string/JSON/exec assertion, and each prompt caps
+`max_tokens`, so a run is 5 short requests. The code-generation probe
+actually executes the model's code, in a throwaway subprocess with no
+filesystem/network access and a hard timeout — not just a pattern match.
+
+The same suite (`quality_tests.py`) also ships as a CLI,
+`tests/model_quality.py`, for running it from a terminal or CI instead of
+the browser:
 
 ```bash
 # a Pollinations model, using a personal access token
